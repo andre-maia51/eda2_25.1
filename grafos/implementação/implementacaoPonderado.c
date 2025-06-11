@@ -30,24 +30,25 @@
         pesos das arestas existentes (não consideramos a existência de peso nega-
         tivo no momento). 
     
+    > Representação em Lista de Adjacências:
+        - Por que o peso fica na estrutura do 'Node'? Porque na lista de
+        adjacências, cada 'Node' da lista encadeada representa a própria
+        ARESTA (a conexão). O array 'adj[i]' aponta para o vértice 'i', e
+        cada 'Node' em sua lista representa uma aresta que *sai* de 'i' para
+        um vizinho. Portanto, o peso, que é uma propriedade da aresta, é
+        armazenado logicamente junto da informação do vizinho.
+
+        - Exemplo Curto: Uma aresta de A(0) para B(1) com peso 7 seria
+        representada assim na lista de adjacência do vértice 0:
+
+        adj[0] -> [ v: 1 | weight: 7 ] -> NULL
+    
 */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-
-#define key int
-#define data int
-
-typedef struct {
-    key k; /// armazena o peso
-    data v; // armazena o vértice
-} Item;
-
-#define getKey(A) (A.k)
-#define less(A, B) (getKey(A) < getKey(B))
-#define eq(A, B) (getKey(A) == getKey(B))
-#define swap(A, B) {Item temp = A; A = B; B = temp;}
+#include <limits.h>
 
 // Implementação da estrutura de dados
 typedef struct {
@@ -158,7 +159,52 @@ void GRAPHdijkstra1(Graph G, int s, int *pa, int *dist) {
     Essa implementação custa muito, por conta da parte que procuramos o vértice
     não maduro com a menor distância. Para isso, podemos implementar uma heap p/
     diminuir o custo do dijktra. 
+
+    >> COMO FUNCIONA A HEAP INDEXADA PARA O DIJKSTRA <<
+
+    A Fila de Prioridade (PQ) implementada aqui é a ferramenta que torna o
+    Dijkstra eficiente. Em vez de procurar o vértice de menor distância em
+    um array toda vez (custo O(V)), a heap nos dá essa informação em
+    tempo O(log V). Ela possui três componentes principais:
+
+    1. O HEAP (array 'pq'): É um array que representa uma árvore binária
+    de forma compacta. Ele é ordenado de uma maneira especial (propriedade
+    do heap) onde o elemento na primeira posição, 'pq[1]', é sempre o
+    vértice com a menor distância (a maior prioridade).
+
+    2. O MAPEAMENTO INVERSO (array 'qp'): Este é o "pulo do gato". Ele
+    funciona como um índice que nos permite encontrar a posição de QUALQUER
+    vértice dentro do heap instantaneamente. 'qp[vertice]' nos retorna
+    a posição daquele vértice no array 'pq'. Sem isso, teríamos que
+    percorrer o heap para achar um vértice, o que seria lento e anularia
+    a vantagem de usá-lo.
+
+    3. AS OPERAÇÕES:
+       - fixUp (subir): Quando a prioridade de um item aumenta (sua
+         distância diminui), ele pode precisar "subir" na árvore do heap
+         para manter a ordem. Essa função cuida disso.
+       - fixDown (afundar): Quando um item no topo é substituído por um
+         de menor prioridade (maior distância), ele precisa "afundar" na
+         árvore até sua posição correta.
+       - PQinsert: Adiciona um novo vértice ao heap.
+       - PQdelmin: Remove e retorna o vértice de maior prioridade (o do
+         topo, com menor distância).
+       - PQchange: Usa o 'qp' para encontrar um vértice rapidamente e
+         atualiza sua prioridade, chamando 'fixUp' para reordenar.
 */
+
+#define Weight int
+#define Vertex int
+
+typedef struct {
+    Weight weight; /// armazena o peso
+    Vertex vertex; // armazena o vértice
+} Item;
+
+#define getWeight(A) (A.weight)
+#define less(A, B) (getWeight(A) < getWeight(B))
+#define eq(A, B) (getWeight(A) == getWeight(B))
+#define swap(A, B) {Item temp = A; A = B; B = temp;}
 
 // Implementação da Heap
 typedef struct pq *PQ;
@@ -170,8 +216,8 @@ struct pq {
 
 void PQswap(PQ pq, int i, int j) {
     swap(pq->pq[i], pq->pq[j]);
-    pq->qp[pq->pq[i].v] = i;
-    pq->qp[pq->pq[j].v] = j;
+    pq->qp[pq->pq[i].vertex] = i;
+    pq->qp[pq->pq[j].vertex] = j;
 }
 
 void fixUp(PQ pq, int k) {
@@ -210,7 +256,7 @@ int PQcontains(PQ pq, int v) {
 
 void PQinsert(PQ pq, Item item) {
     pq->size++;
-    pq->qp[item.v] = pq->size;
+    pq->qp[item.vertex] = pq->size;
     pq->pq[pq->size] = item;
     fixUp(pq, pq->size);
 }
@@ -219,13 +265,13 @@ Item PQdelmin(PQ pq) {
     Item item = pq->pq[1];
     PQswap(pq, 1, pq->size--);
     fixDown(pq, 1);
-    pq->qp[item.v] = -1;
+    pq->qp[item.vertex] = -1;
     return item;
 }
 
 void PQchange(PQ pq, Item item) {
-    int pos = pq->qp[item.v];
-    pq->pq[pos].k = item.k;
+    int pos = pq->qp[item.vertex];
+    pq->pq[pos].weight = item.weight;
     fixUp(pq, pos);
     fixDown(pq, pos);
 }
@@ -240,20 +286,20 @@ void GRAPHdijkstraHeap(Graph G, int s, int *pa, int *dist) {
     dist[s] = 0, pa[s] = s;
 
     PQ pq = PQinit(G->V);
-    PQinsert(pq, (Item){.k = 0, .v = s});
+    PQinsert(pq, (Item){.weight = 0, .vertex = s});
 
     while(!PQempty(pq)) {
         Item item = PQdelmin(pq);
-        int v = item.v;
+        int v = item.vertex;
 
-        if(item.k < dist[v]) continue;
+        if(item.weight < dist[v]) continue;
 
         for(Node l = G->adj[v]; l != NULL; l = l->next) {
             if(dist[v] != __INT_MAX__ && dist[v] + l->weight < dist[l->v]) {
                 dist[l->v] = dist[v] + l->weight;
                 pa[l->v] = v;
 
-                Item i = {.k = dist[l->v], .v = l->v};
+                Item i = {.weight = dist[l->v], .vertex = l->v};
                 if(PQcontains(pq, l->v)) PQchange(pq, i);
                 else PQinsert(pq, i);
             }
@@ -262,3 +308,125 @@ void GRAPHdijkstraHeap(Graph G, int s, int *pa, int *dist) {
 
     free(pq->pq), free(pq->qp), free(pq);
 }
+
+/*
+    Aula 10/06
+    >> Bellman Ford <<
+
+    Assim como o Dijkstra, o Bellman-Ford também resolve o problema do caminho
+    mínimo de origem única.
+
+        > Principais Vantagens: Sua grande força é funcionar com arestas de peso
+        negativo e ser capaz de detectar ciclos de peso negativo.
+
+        > Funcionamento: A abordagem é baseada em relaxamento sucessivo. Ele repete
+        um laço V-1 vezes e, em cada laço, relaxa TODAS as E arestas do grafo.
+        Por que V-1 vezes? Porque o maior caminho simples (sem ciclos) em um grafo
+        com V vértices tem, no máximo, V-1 arestas. Com V-1 passadas, o algoritmo
+        garante que a distância correta se "propague" da origem até o mais distante.
+
+        > Detecção de Ciclo Negativo: Após as V-1 passadas, o algoritmo faz uma
+        V-ésima verificação. Se alguma distância ainda puder ser diminuída, significa
+        que o caminho mais "curto" teria V ou mais arestas, o que só é possível se
+        ele passar por um ciclo. Se esse ciclo diminui o custo total, ele é um
+        ciclo de peso negativo.
+
+        > Otimização com Fila e Sentinela: A implementação que você estudou usa
+        uma fila para processar apenas vértices cujas distâncias foram recentemente
+        atualizadas. O valor 'V' é usado como um sentinela na fila para contar
+        quantas "rodadas" de relaxamento ocorreram, permitindo a detecção de
+        ciclos negativos de forma eficiente.
+*/
+
+// Implementação da Fila
+typedef struct queue *Queue;
+struct queue {
+    int front, back;
+    int size;
+    int *items;
+};
+
+Queue QUEUEinit(int V) {
+    Queue Q = malloc(sizeof(*Q));
+    Q->front = 0;
+    Q->back = 0;
+    Q->size = V;
+    Q->items = malloc(V * sizeof(int));
+    return Q;
+}
+
+int QUEUEfull(Queue Q) {
+    return Q->back == Q->size;
+}
+
+int QUEUEempty(Queue Q) {
+    return Q->front == Q->back;
+}
+
+int QUEUEget(Queue Q) {
+    return Q->items[Q->front++];
+}
+
+void QUEUEput(Queue Q, int V) {
+    Q->items[Q->back++] = V;
+}
+
+// Implementação do Bellman-Ford
+bool GRAPHsearchBF(Graph G, int s, int *pa, int *dist) {
+    // é um array vértice-indexado que verifica se o vértice ta na fila
+    bool onqueue[1000];
+
+    for(int i = 0; i < G->V; i++) {
+        pa[i] = -1, dist[i] = __INT_MAX__, onqueue[i] = false;
+    }
+
+    pa[s] = s, dist[s] = 0;
+
+    Queue Q = QUEUEinit(G->V);
+    QUEUEput(Q, s);
+    onqueue[s] = true;
+
+    int V = G->V, k = 0;
+    QUEUEput(Q, V);
+
+    while(true) {
+        int x = QUEUEget(Q);
+        if(x < V) {
+            for(Node l = G->adj[x]; l != NULL; l = l->next) {
+                if(dist[x] + l->weight < dist[l->v]) {
+                    dist[l->v] = dist[x] + l->weight;
+                    pa[l->v] = x;
+
+                    if(onqueue[l->v] == false) {
+                        QUEUEput(Q, l->v);
+                        onqueue[l->v] = true;
+                    }
+                }
+            }
+        } else {
+            if(QUEUEempty(Q)) return true;
+            if(++k >= G->V) return false;
+            QUEUEput(Q, V);
+            for(int i = 0; i < G->V; i++) onqueue[i] = false;
+        }
+    }
+}
+
+/*
+    >> Comparativo
+        > Complexidades: 
+            - Dijkstra com Heap: O(E*log(V))
+            - Bellman-Ford: O(V*E)
+
+        > Pesos Negativos:
+            - Dijkstra com Heap: Não suporta
+            - Bellman-Ford: Suporta
+        
+        > Ciclos Negativos: 
+            - Dijkstra com Heap: Não detecta
+            - Bellman-Ford: Detecta
+        
+        > Abordagem:
+            - Dijkstra com Heap: Gulosa (Greedy)
+            - Bellman-Ford: Programação Dinâmica
+*/
