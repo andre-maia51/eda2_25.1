@@ -126,13 +126,13 @@ void GRAPHdijkstra1(Graph G, int s, int *pa, int *dist) {
     bool mature[G->V + 1];
 
     for(int i = 0; i < G->V; i++) {
-        pa[i] = -1, mature[i] = false, dist[i] = __INT_MAX__;
+        pa[i] = -1, mature[i] = false, dist[i] = INT_MAX;
     }
 
     pa[s] = s, dist[s] = 0;
 
     while(true) {
-        int min = __INT_MAX__;
+        int min = INT_MAX;
         int y; 
 
         for(int z = 0; z < G->V; z++) {
@@ -141,7 +141,7 @@ void GRAPHdijkstra1(Graph G, int s, int *pa, int *dist) {
             if(dist[z] < min) min = dist[z], y = z;
         }
 
-        if(min == __INT_MAX__) break;
+        if(min == INT_MAX) break;
 
         for(Node a = G->adj[y]; a != NULL; a = a->next) {
             if(mature[a->v]) continue;
@@ -279,7 +279,7 @@ void PQchange(PQ pq, Item item) {
 // Implementação do Dijkstra com Heap
 void GRAPHdijkstraHeap(Graph G, int s, int *pa, int *dist) {
     for(int i = 0; i < G->V; i++) {
-        dist[i] = __INT_MAX__;
+        dist[i] = INT_MAX;
         pa[i] = -1;
     }
 
@@ -295,7 +295,7 @@ void GRAPHdijkstraHeap(Graph G, int s, int *pa, int *dist) {
         if(item.weight < dist[v]) continue;
 
         for(Node l = G->adj[v]; l != NULL; l = l->next) {
-            if(dist[v] != __INT_MAX__ && dist[v] + l->weight < dist[l->v]) {
+            if(dist[v] != INT_MAX && dist[v] + l->weight < dist[l->v]) {
                 dist[l->v] = dist[v] + l->weight;
                 pa[l->v] = v;
 
@@ -377,7 +377,7 @@ bool GRAPHsearchBF(Graph G, int s, int *pa, int *dist) {
     bool onqueue[1000];
 
     for(int i = 0; i < G->V; i++) {
-        pa[i] = -1, dist[i] = __INT_MAX__, onqueue[i] = false;
+        pa[i] = -1, dist[i] = INT_MAX, onqueue[i] = false;
     }
 
     pa[s] = s, dist[s] = 0;
