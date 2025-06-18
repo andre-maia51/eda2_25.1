@@ -227,12 +227,15 @@ void fixUp(PQ pq, int k) {
     }
 }
 
-void fixDown(PQ pq, int k) {
-    while(2 * k <= pq->size) {
-        int j = 2 * k;
-        if(j < pq->size && less(pq->pq[j+1], pq->pq[j])) j++;
-        if(!less(pq->pq[j], pq->pq[k])) break;
-        PQswap(pq, k, j);
+void fixDown(PQ PQ, int k) {
+    int j;
+
+    while(2*k <= PQ->size) {
+        j = 2*k;
+
+        if(j < PQ->size && less(PQ->pq[j+1], PQ->pq[j])) j++;
+        if(less(PQ->pq[k], PQ->pq[j])) break;
+        PQswap(PQ, k, j);
         k = j;
     }
 }
@@ -292,7 +295,7 @@ void GRAPHdijkstraHeap(Graph G, int s, int *pa, int *dist) {
         Item item = PQdelmin(pq);
         int v = item.vertex;
 
-        if(item.weight < dist[v]) continue;
+        if(item.weight > dist[v]) continue;
 
         for(Node l = G->adj[v]; l != NULL; l = l->next) {
             if(dist[v] != INT_MAX && dist[v] + l->weight < dist[l->v]) {
