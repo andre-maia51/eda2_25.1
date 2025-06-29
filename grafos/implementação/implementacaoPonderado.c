@@ -514,7 +514,7 @@ void MSTprimHeap(Graph G, int s, int *pa) {
     int price[1000];
 
     for(int i = 0; i < G->V; i++) {
-        pa[i] = -2, tree[i] = false, price[i] = INT_MAX;
+        pa[i] = -1, tree[i] = false, price[i] = INT_MAX;
     }
 
     pa[s] = s, tree[s] = true, price[s] = 0;
