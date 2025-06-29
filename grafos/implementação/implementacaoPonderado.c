@@ -433,3 +433,113 @@ bool GRAPHsearchBF(Graph G, int s, int *pa, int *dist) {
             - Dijkstra com Heap: Gulosa (Greedy)
             - Bellman-Ford: Programação Dinâmica
 */
+
+/*
+    - Aula 12/06
+    >> ÁRVORES GERADORAS <<
+
+    - Uma árvore geradora de um grafo concectado é um subconjunto de arestas que conecta
+    todos os vértices sem formar ciclos. 
+    - Imagine que o grafo é uma cidade com vários pontos (vértices) e várias ruas (arestas)
+    conectando-os. Uma árvore geradora seria o conjunto mínimo de ruas que você precisa manter
+    abertas para que seja possível ir de qualquer ponto a qualquer outro, sem que haja um caminho
+    circular (um ciclo).
+    - Para um grafo com V vértices, uma árvore geradora sempre terá V-1 arestas.
+
+    > Conceitos Principais
+        > Propriedade dos Circuitos: 
+            - Ao pegar uma árvore geradora e adicionar uma aresta que não
+            pertencia a ela, inevitavelmente, criaremos um ciclo. Para restaurar a árvore, podemos
+            remover qualquer aresta desse ciclo.
+
+        > Propriedade dos Cortes: 
+            - Ao remover uma aresta de uma árvore geradora, ela se dividirá
+            em duas partes (dois conjuntos de vértices). Um corte é o conjunto de todas as arestas
+            que conectam essas duas partes. Para reconectar a árvore, podemos adicionar qualquer aresta
+            do corte.
+
+    >> ÁRVORES GERADORAS DE CUSTO MÍNIMO (MST) <<
+
+    - Uma árvore geradora mínima de G, um grafo não dirigido com custos nas arestas, é qualquer árvore
+    geradora de G que tenha custo mínimo. Em outras palavras, uma árvore geradora T de G é mínima se 
+    nenhuma outra árvore geradora tem custo menor que o de T (minimum spanning tree - MST). 
+    - Problema da MST: Dado um grafo não dirigido com custos nas arestas, encontrar uma MST do grafo.
+    - É claro que esse problema tem solução se, e somente se, o grafo é conexo. Outra observação óbvia
+    é que se todas as arestas tiverem o mesmo custo, então toda árvore geradora é uma MST.
+
+    > Critério de minimalidade baseado em circuitos e em cortes
+        - Dada uma MST de um grafo, não é necessariamente verdade que todas as arestas baratas estão na
+        MST e todas as caras estão fora. 
+        - A propriedade dos circuitos e dos cortes levam a prova dessa afirmação.
+
+    - Os algoritmos que resolvem o problema da MST possuem caráter guloso, ou seja, a cada passo, eles
+    fazem uma escolha que parece a melhor naquele momento, sem se preocupar com as consequências futu-
+    ras. Para o problema da MST, essa estratégias funciona e leva a solução ótima.
+
+    - Os dois principais algoritmos que usam a estratégia gulosa para encontrar a MST são:
+        1. Algoritmo de Prim -> que faz crescer uma árvore até que ela se torne geradora;
+        2. Algoritmo de Kruskal -> que faz crescer uma floresta geradora até que ela se torne
+        uma árvore.
+
+    - Eles não consomem mais que O(E*logV).
+*/
+
+/*
+    >> ALGORITMO DE PRIM <<
+    
+    - O algoritmo constrói a árvore aresta por aresta, começando por um vértice arbitrário e, a cada
+    passo, adicionando a aresta de menor custo que conecta um vértice que já está na árvore a um vér-
+    tice que ainda não está.
+    
+    > Funcionamento
+        - O algoritmo é guloso e segue o seguinte passo a passo:
+            1. Começa com um vértice qualquer, que forma a árvore inicial.
+            2. A cada passo, o algoritmo olha pra a franja e escolhe a aresta de menor custo da franja.
+            3. Adiciona essa aresta e o novo vértice à árvore.
+            4. Repete o processo até que todos os vértices estejam na árvore.
+    
+    > Franja
+        - É a fronteira da árvore em construção. Representa todas as possíveis expansões da árvore em
+        um determinado momento.
+        - É o conjunto de todas as arestas que conectam um vértice que já pertence à árvore a um vér-
+        tice que ainda não pertence a ela.
+    
+    - Para garantir eficiencia, o algoritmo de Prim utiliza de uma fila de prioridades para escolher
+    o menor vértice da franja a cada passo, semelhante a estratégia do algoritmo de Dijkstra.
+*/
+
+// Implementação do Algoritmo de Prim com Heap
+void MSTprimHeap(Graph G, int s, int *pa) {
+    bool tree[1000];
+    int price[1000];
+
+    for(int i = 0; i < G->V; i++) {
+        pa[i] = -2, tree[i] = false, price[i] = INT_MAX;
+    }
+
+    pa[s] = s, tree[s] = true, price[s] = 0;
+    
+    for(Node l = G->adj[s]; l != NULL; l = l->next) {
+        pa[l->v] = s, price[l->v] = l->weight;
+    }
+
+    PQ pq = PQinit(G->V);
+    for(int i = 0; i < G->V; i++) {
+        PQinsert(pq, (Item){.vertex = i, .weight = price[i]});
+    }
+
+    while(!PQempty(pq)) {
+        int vertex = PQdelmin(pq).vertex;
+        if(price[vertex] == INT_MAX) break;
+
+        tree[vertex] = true;
+
+        for(Node l = G->adj[vertex]; l != NULL; l = l->next) {
+            if(!tree[l->v] && l->weight < price[l->v]) {
+                price[l->v] = l->weight;
+                PQchange(pq, (Item){.vertex = l->v, .weight = price[l->v]});
+                pa[l->v] = vertex;
+            }
+        }
+    }
+}
