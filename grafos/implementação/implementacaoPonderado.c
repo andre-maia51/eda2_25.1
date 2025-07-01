@@ -543,3 +543,134 @@ void MSTprimHeap(Graph G, int s, int *pa) {
         }
     }
 }
+
+/*
+    >> ALGORITMO DE KRUSKAL <<
+
+    - O objetivo do algoritmo de Kruskal é encontrar uma MST em um grafo conectado com peso
+    nas arestas. Ele, assim como o algoritmo de Prim, possui um comportamento guloso.
+
+    - O algoritmo de Kruskal é baseada na propriedade do corte. Ele implicitamente respeita
+    essa propriedade. Ao escolher a aresta de menor peso global que não forma um ciclo, ele
+    está, na prática, conectando dois componentes (conjuntos de vértices) que estavam sepa-
+    rados - aí entra a estrutura UNION-FIND para garantir isso. Essa conexão é, por defini-
+    ção, a aresta de menor peso que cruza o corte entre os dois componentes.
+
+    1. Inicialização
+        - Crie um conjunto MST que irá armazenar as arestas de nossa árvore.
+        - Crie uma floresta onde cada um dos V vértices do grafo é sua própria árvore iso-
+        lada (uma UNION-FIND).
+
+    2. Ordenação
+        - Crie uma lista com todas as E arestas do grafo e ordene-as em ordem crescente de
+        peso. Passo crucial e, geralmente, o mais custoso do algoritmo.
+    
+    3. Construção da Árvore
+        - Itere pela lista de arestas ordenadas. Para cada aresta (u, v):
+            - Verifique se os vértices u e v já pertencem à mesma árvore.
+            - Se não estão:
+                > Adicione a aresta (u, v) ao conjunto MST.
+                > Una os dois componentes de u e v em um só.
+            - Se estão:
+                > Um ciclo seria criado, portanto, descartamos essa aresta.
+    
+    4. Condição de Parada
+        - Repita o passo 3 até que o conjunto MST tenha V-1 arestas. Nesse ponto, teremos
+        uma árvore que conecta todos os vértices e garantimos que ela é mínima.
+*/
+
+// Implementação do UNION-FIND
+typedef struct unionFind *UF;
+struct unionFind {
+    int *parent;
+    int *rank;
+};
+
+UF UFinit(int V) {
+    UF uf = malloc(sizeof(*uf));
+
+    uf->parent = malloc(V * sizeof(int));
+    uf->rank = malloc(V * sizeof(int));
+
+    for(int i = 0; i < V; i++) {
+        uf->parent[i] = i;
+        uf->rank[i] = 0;
+    }
+
+    return uf;
+}
+
+int UFfind(UF uf, int i) {
+    if(uf->parent[i] != i) {
+        uf->parent[i] = UFfind(uf, uf->parent[i]);
+    }
+
+    return uf->parent[i];
+}
+
+void UFunion(UF uf, int p, int q) {
+    int rootP = UFfind(uf, p), rootQ = UFfind(uf, q);
+    if(rootP == rootQ) return;
+
+    if(uf->rank[rootP] > uf->rank[rootQ]) {
+        uf->parent[rootQ] = rootP;
+    } else if(uf->rank[rootP] < uf->rank[rootQ]) {
+        uf->parent[rootP] = rootQ;
+    } else {
+        uf->parent[rootQ] = rootP;
+        uf->rank[rootP]++;
+    }
+}
+
+bool UFconnected(UF uf, int p, int q) {
+    return UFfind(uf, p) == UFfind(uf, q);
+}
+
+void UFfree(UF uf) {
+    free(uf->parent), free(uf->rank), free(uf);
+}
+
+// Implementação da função de comparação do qsort
+int EDGEcompare(const void *a, const void *b) {
+    Edge *A = (Edge *)a;
+    Edge *B = (Edge *)b;
+
+    return A->weight - B->weight;
+}
+
+// Implementação do algoritmo de Kruskal
+typedef struct {
+    Edge *edges;
+    int size;
+} MST;
+
+
+MST MSTkruskal(Graph G) {
+    Edge *edgesOnGraph = malloc(G->E * sizeof(Edge));
+    int edgeCount = 0;
+
+    for(int i = 0; i < G->V; i++) {
+        for(Node l = G->adj[i]; l != NULL; l = l->next) {
+            if(i < l->v) 
+                edgesOnGraph[edgeCount++] = EDGEnew(i, l->v, l->weight);
+        }
+    }
+
+    qsort(edgesOnGraph, edgeCount, sizeof(Edge), EDGEcompare);
+
+    UF uf = UFinit(G->V);
+    Edge *edgeRes = malloc((G->V - 1) * sizeof(Edge));
+    int edgeOnMST = 0;
+
+    for(int i = 0; i < edgeCount && edgeOnMST < G->V - 1; i++) {
+        Edge e = edgesOnGraph[i];
+
+        if(!UFconnected(uf, e.v, e.w)) {
+            UFunion(uf, e.v, e.w);
+            edgeRes[edgeOnMST++] = e;
+        }
+    }
+
+    free(edgesOnGraph), UFfree(uf);
+    return (MST){.edges = edgeRes, .size = edgeOnMST};
+}
